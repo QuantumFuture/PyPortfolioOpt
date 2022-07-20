@@ -402,7 +402,17 @@ class BlackLittermanModel(base_optimizer.BaseOptimizer):
         if self._A is None:
             self._A = (self.P @ self._tau_sigma_P) + self.omega
         b = self.Q - self.P @ self.pi
-        post_rets = self.pi + self._tau_sigma_P @ np.linalg.solve(self._A, b)
+        
+        # Catch singluar matrix
+        try:
+            post_rets = self.pi + self._tau_sigma_P @ np.linalg.solve(self._A, b)
+
+        except np.linalg.LinAlgError:
+            
+            print("singluar matrix detected, bl_returns")
+            
+            post_rets = self.pi + self._tau_sigma_P @ np.linalg.lstsq(self._A, b, rcond= None)[0]
+            
         return pd.Series(post_rets.flatten(), index=self.tickers)
 
     def bl_cov(self):
@@ -421,7 +431,18 @@ class BlackLittermanModel(base_optimizer.BaseOptimizer):
             self._A = (self.P @ self._tau_sigma_P) + self.omega
 
         b = self._tau_sigma_P.T
-        M = self.tau * self.cov_matrix - self._tau_sigma_P @ np.linalg.solve(self._A, b)
+        
+        # Catch singluar matrix
+        try: 
+
+            M = self.tau * self.cov_matrix - self._tau_sigma_P @ np.linalg.solve(self._A, b)
+
+        except np.linalg.LinAlgError:
+            
+            print("singluar matrix detected, bl_cov")
+            
+            M = self.tau * self.cov_matrix - self._tau_sigma_P @ np.linalg.lstsq(self._A, b, rcond= None)[0]
+            
         posterior_cov = self.cov_matrix + M
         return pd.DataFrame(posterior_cov, index=self.tickers, columns=self.tickers)
 
